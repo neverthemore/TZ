@@ -9,11 +9,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: be779e424503fe447b19e7742b7bcc68, type: 3}
+  m_Script: {fileID: 11500000, guid: e0a1347b828fed447bca51c07ae94418, type: 3}
   m_Name: Capsule
   m_EditorClassIdentifier: 
-  itemName: Cube
-  itemID: 2
-  weight: 1.5
-  itemType: 1
-  prefab: {fileID: 5518397515745115858, guid: 75ff25877ca62424bbc01cdbbe2bb058, type: 3}
+  itemName: Capsule
+  weight: 0.83
+  id: 1
+  type: 1
+  prefab: {fileID: 0}
+  inventoryPosition: {x: 0, y: -0.182, z: 0}
+  uiPosition: {x: 0, y: 0, z: 0}

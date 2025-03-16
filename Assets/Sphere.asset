@@ -9,11 +9,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: be779e424503fe447b19e7742b7bcc68, type: 3}
+  m_Script: {fileID: 11500000, guid: e0a1347b828fed447bca51c07ae94418, type: 3}
   m_Name: Sphere
   m_EditorClassIdentifier: 
   itemName: Sphere
-  itemID: 1
-  weight: 1
-  itemType: 2
-  prefab: {fileID: 5912956360280629757, guid: bc86bb0d4cc79a740a037768e1c2b626, type: 3}
+  weight: 1.54
+  id: 2
+  type: 2
+  prefab: {fileID: 0}
+  inventoryPosition: {x: 0.212, y: -0.11, z: -0.351}
+  uiPosition: {x: 0, y: 0, z: 0}
