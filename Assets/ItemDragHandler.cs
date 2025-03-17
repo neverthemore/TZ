@@ -1,4 +1,3 @@
-// Inventory/ItemDragHandler.cs
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -6,20 +5,23 @@ using UnityEngine.EventSystems;
 public class ItemDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     private Camera _mainCamera;
-    private InventoryItem _item;
+    private InventoryItem _inventoryItem;
     private Vector3 _offset;
     private float _zDistance;
 
     private void Awake()
     {
-        _item = GetComponent<InventoryItem>();
+        _inventoryItem = GetComponent<InventoryItem>();
         _mainCamera = Camera.main;
     }
-
+    public void Update()
+    {
+        
+    }
     public void OnBeginDrag(PointerEventData eventData)
     {
+        _inventoryItem.Pickup(); // Поднимаем предмет
         CalculateOffset();
-        _item.Pickup(_mainCamera.transform); // Берем предмет
     }
 
     private void CalculateOffset()
@@ -27,13 +29,13 @@ public class ItemDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         _zDistance = Vector3.Distance(_mainCamera.transform.position, transform.position);
         Vector3 mousePosition = new Vector3(Input.mousePosition.x, Input.mousePosition.y, _zDistance);
         Vector3 worldPosition = _mainCamera.ScreenToWorldPoint(mousePosition);
-        _offset = transform.position - worldPosition;
+        _offset = transform.position - worldPosition; // Вычисляем смещение
     }
 
     public void OnDrag(PointerEventData eventData)
     {
         Vector3 newPosition = GetMouseWorldPosition() + _offset;
-        transform.position = Vector3.Lerp(transform.position, newPosition, Time.deltaTime * 15f);
+        transform.position = newPosition; // Двигаем предмет вместе с мышью
     }
 
     public void OnEndDrag(PointerEventData eventData)
@@ -44,15 +46,24 @@ public class ItemDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     private void HandleDrop()
     {
         Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
+        if (Physics.Raycast(ray, out RaycastHit hit))
         {
-            if (hit.collider.TryGetComponent(out Backpack backpack))
+            if (hit.collider.TryGetComponent<Backpack>(out Backpack backpack))
             {
-                backpack.TryStoreItem(_item);
-                return;
+                Debug.Log("Trying to store item in backpack.");
+                backpack.TryStoreItem(_inventoryItem);
+            }
+            else
+            {
+                Debug.Log("Dropped outside the backpack. Item will fall.");
+                _inventoryItem.Drop(); // Если отпустили предмет вне рюкзака
             }
         }
-        _item.Drop(); // Если не попали в рюкзак - бросаем
+        else
+        {
+            Debug.Log("Dropped outside the backpack. Item will fall.");
+            _inventoryItem.Drop(); // Если отпустили предмет вне рюкзака
+        }
     }
 
     private Vector3 GetMouseWorldPosition()

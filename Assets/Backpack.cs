@@ -1,8 +1,8 @@
-// Inventory/Backpack.cs
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.EventSystems;
 using static UnityEditor.Progress;
 
 public class Backpack : MonoBehaviour
@@ -10,42 +10,54 @@ public class Backpack : MonoBehaviour
     [System.Serializable]
     public class InventoryEvent : UnityEvent<ItemData, string> { }
 
-    [Header("Configuration")]
-    [SerializeField] private Transform _itemsContainer; // Контейнер для хранения
-    [SerializeField] private float _snapDuration = 0.3f;
+    [Header("Config")]
+    [SerializeField] private Transform _itemsContainer; // Контейнер для хранения предметов
+    [SerializeField] private float _snapDuration = 0.3f; // Время анимации
 
-    [Header("Events")]
     public InventoryEvent OnInventoryChanged;
 
-    private Dictionary<ItemType, InventoryItem> _storedItems = new();
-    private bool _isInventoryVisible;
+    private Dictionary<ItemType, InventoryItem> _storedItems = new Dictionary<ItemType, InventoryItem>();
 
-  
-
-    public void RemoveItem(ItemType type)
+    private void Update()
     {
-        if (!_storedItems.TryGetValue(type, out InventoryItem item)) return;
+        // Проверка клика мыши на предмет
+        DealingWithItemClick();
+    }
+    public bool TryStoreItem(InventoryItem item)
+    {
+        if (item == null)
+        {
+            Debug.LogError("Item is null. Cannot store item in backpack.");
+            return false;
+        }
 
-        // Возвращаем оригинального родителя перед анимацией
-        item.transform.SetParent(item.OriginalParent);
+        if (item.Data == null)
+        {
+            Debug.LogError("Item data is null for item: " + item.name);
+            return false;
+        }
 
-        StartCoroutine(SnapToPosition(
-            item.transform,
-            item.OriginalLocalPosition,
-            item.OriginalLocalRotation
-        ));
+        // Проверка на наличие предмета того же типа в рюкзаке
+        if (_storedItems.ContainsKey(item.Data.itemType))
+        {
+            Debug.LogWarning($"Slot {item.Data.itemType} is occupied!");
+            return false;
+        }
 
-        _storedItems.Remove(type);
+        item.transform.SetParent(_itemsContainer); // Устанавливаем предмет под контейнер
 
-        OnInventoryChanged?.Invoke(item.Data, "removed");
-        NetworkManager.Instance.SendInventoryEvent(item.Data.itemID, "remove");
+        Vector3 targetPosition = item.Data.backpackPosition;
+        Quaternion targetRotation = Quaternion.Euler(item.Data.backpackRotation);
+
+        StartCoroutine(SnapToPosition(item.transform, targetPosition, targetRotation));
+        item.SetInBackpack(); // Устанавливаем статус предмета, что он в рюкзаке
+
+        _storedItems.Add(item.Data.itemType, item);
+        OnInventoryChanged?.Invoke(item.Data, "added");
+        return true;
     }
 
-    private IEnumerator SnapToPosition(
-        Transform itemTransform,
-        Vector3 targetLocalPosition,
-        Quaternion targetLocalRotation
-    )
+    private IEnumerator SnapToPosition(Transform itemTransform, Vector3 targetPosition, Quaternion targetRotation)
     {
         float elapsed = 0f;
         Vector3 startPosition = itemTransform.localPosition;
@@ -53,52 +65,57 @@ public class Backpack : MonoBehaviour
 
         while (elapsed < _snapDuration)
         {
-            itemTransform.localPosition = Vector3.Lerp(
-                startPosition,
-                targetLocalPosition,
-                elapsed / _snapDuration
-            );
-
-            itemTransform.localRotation = Quaternion.Slerp(
-                startRotation,
-                targetLocalRotation,
-                elapsed / _snapDuration
-            );
-
+            itemTransform.localPosition = Vector3.Lerp(startPosition, targetPosition, elapsed / _snapDuration);
+            itemTransform.localRotation = Quaternion.Slerp(startRotation, targetRotation, elapsed / _snapDuration);
             elapsed += Time.deltaTime;
             yield return null;
         }
 
-        itemTransform.localPosition = targetLocalPosition;
-        itemTransform.localRotation = targetLocalRotation;
+        itemTransform.localPosition = targetPosition;
+        itemTransform.localRotation = targetRotation;
     }
-
-    private Vector3 GetTargetPosition(ItemData data)
+    private void DealingWithItemClick()
     {
-        return data.backpackPosition; // Теперь работаем с локальными координатами
-    }
-
-    public bool TryStoreItem(InventoryItem item)
-    {
-        if (_storedItems.ContainsKey(item.Data.itemType))
+        if (Input.GetMouseButtonDown(0)) // Проверка нажатия ЛКМ
         {
-            Debug.LogWarning($"Slot {item.Data.itemType} is occupied!");
-            return false;
+            Debug.Log("Checking for item click.");
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            int layerMask = LayerMask.GetMask("Backpack"); // Получаем маску слоя рюкзака, который будем игнорировать
+            if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, ~layerMask)) // Используем косое отрицание для игнорирования слоя
+            {
+                Debug.Log($"Hit object: {hit.collider.gameObject.name}"); // выводим имя объекта
+                if (hit.collider.TryGetComponent<InventoryItem>(out InventoryItem clickedItem))
+                {
+                    if (clickedItem.IsInBackpack) // Проверка, предмет в рюкзаке
+                    {
+                        Debug.Log($"Item clicked: {clickedItem.Data.itemName}. It is in the backpack.");
+                        clickedItem.ResetPosition(); // Возвращаем предмет на позицию
+                        
+                            RemoveItem(clickedItem.Data.itemType);
+                            Debug.Log($"Item removed: {clickedItem.Data.itemName}");
+                        
+
+                    }
+                   
+                }
+            }
+            else
+            {
+                Debug.Log("Raycast did not hit any object.");
+            }
         }
+    }
 
-        // Устанавливаем нового родителя перед анимацией
-        item.transform.SetParent(_itemsContainer);
+    public void RemoveItem(ItemType itemType)
+    {
+        if (_storedItems.TryGetValue(itemType, out InventoryItem itemToRemove))
+        {
+            itemToRemove.Drop(); // Возвращаем предмет
+           
 
-        StartCoroutine(SnapToPosition(
-            item.transform,
-            item.Data.backpackPosition,
-            Quaternion.Euler(item.Data.backpackRotation)
-        ));
-
-        _storedItems.Add(item.Data.itemType, item);
-
-        OnInventoryChanged?.Invoke(item.Data, "added");
-        NetworkManager.Instance.SendInventoryEvent(item.Data.itemID, "add");
-        return true;
+            // Удаляем предмет из хранения
+            _storedItems.Remove(itemType);
+            OnInventoryChanged?.Invoke(itemToRemove.Data, "removed");
+        }
     }
 }

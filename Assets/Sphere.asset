@@ -12,10 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e0a1347b828fed447bca51c07ae94418, type: 3}
   m_Name: Sphere
   m_EditorClassIdentifier: 
+  itemID: 2
   itemName: Sphere
   weight: 1.54
-  id: 2
-  type: 2
-  prefab: {fileID: 0}
-  inventoryPosition: {x: 0.212, y: -0.11, z: -0.351}
-  uiPosition: {x: 0, y: 0, z: 0}
+  itemType: 2
+  physicalPrefab: {fileID: 8908327262034119361, guid: 1856b6c31e1cf8f4cb98c0c2a68182f9,
+    type: 3}
+  uiIcon: {fileID: 21300000, guid: 2afd2d984873e44409749712617001b2, type: 3}
+  backpackPosition: {x: -0.309, y: 0, z: 0}
+  backpackRotation: {x: 0, y: 0, z: 0}

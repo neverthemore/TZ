@@ -30,33 +30,31 @@ public class NetworkManager : MonoBehaviour
 
     private IEnumerator PostRequest(string itemID, string eventType)
     {
-        // Формируем JSON данные
-        var postData = new PostData
-        {
-            item_id = itemID,
-            event_type = eventType
-        };
-
+        var postData = new PostData { item_id = itemID, event_type = eventType };
         string json = JsonUtility.ToJson(postData);
         byte[] rawData = System.Text.Encoding.UTF8.GetBytes(json);
 
-        using UnityWebRequest request = new UnityWebRequest(API_URL, "POST");
-        request.uploadHandler = new UploadHandlerRaw(rawData);
-        request.downloadHandler = new DownloadHandlerBuffer();
+        using UnityWebRequest request = new UnityWebRequest(API_URL, "POST")
+        {
+            uploadHandler = new UploadHandlerRaw(rawData),
+            downloadHandler = new DownloadHandlerBuffer()
+        };
+
         request.SetRequestHeader("Content-Type", "application/json");
         request.SetRequestHeader("Authorization", $"Bearer {AUTH_TOKEN}");
-
         yield return request.SendWebRequest();
 
         if (request.result == UnityWebRequest.Result.Success)
         {
             Debug.Log($"Success: {request.downloadHandler.text}");
+         
         }
         else
         {
             Debug.LogError($"Error: {request.error}");
         }
     }
+
 
     [System.Serializable]
     private class PostData

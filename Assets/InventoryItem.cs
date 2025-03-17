@@ -1,63 +1,88 @@
-// Items/InventoryItem.cs
+using System.Collections;
 using UnityEngine;
 
-[RequireComponent(typeof(Rigidbody), typeof(Collider))]
+[RequireComponent(typeof(Rigidbody))]
 public class InventoryItem : MonoBehaviour
 {
-    [Header("Item Configuration")]
-    [SerializeField] private ItemData _itemData;
+    public ItemData Data; // Ссылка на данные предмета
 
     private Rigidbody _rb;
-    private Collider _collider;
-    private Transform _originalParent;
-    private Vector3 _originalPosition;
-    private Quaternion _originalRotation;
+    private Collider _collider;  
+    private Vector3 originalPosition;
+    private Quaternion originalRotation;
 
-    public Vector3 OriginalLocalPosition => _originalPosition;
-    public Quaternion OriginalLocalRotation => _originalRotation;
-    public Transform OriginalParent => _originalParent;
+    public Vector3 OriginalLocalPosition => originalPosition;
+    public Quaternion OriginalLocalRotation => originalRotation;
+  
+ 
+    public bool IsInBackpack { get; private set; }
 
-
-    public ItemData Data => _itemData;
 
     private void Awake()
     {
-        InitializeComponents();
-        StoreOriginalTransform();
-    }
-
-    private void InitializeComponents()
-    {
+        
         _rb = GetComponent<Rigidbody>();
         _collider = GetComponent<Collider>();
-        _rb.mass = _itemData.weight; // Устанавливаем массу из данных
+        _rb.mass = Data.weight;
+        IsInBackpack = false; // По умолчанию предмет не в рюкзаке
+        StoreOriginalTransform();
     }
+    
 
     private void StoreOriginalTransform()
     {
-        _originalParent = transform.parent;
-        _originalPosition = transform.localPosition;
-        _originalRotation = transform.localRotation;
-    }
 
-    public void Pickup(Transform newParent)
+        originalPosition = transform.localPosition; // Начальная позиция
+        originalRotation = transform.localRotation; // Начальная ориентация
+    }
+    public void Pickup()
     {
-        _rb.isKinematic = true; // Отключаем физику при подборе
-        _collider.enabled = false;
-        transform.SetParent(newParent);
+        IsInBackpack = false;
+        _rb.isKinematic = true;
+        _rb.useGravity = false; // Отключаем гравитацию при поднятии
     }
 
     public void Drop()
     {
+        _rb.isKinematic = false; // Включаем физику
+        _rb.useGravity = true; // Включаем гравитацию
+        IsInBackpack = false;
+  
+    }
+    public void ResetPosition() // Метод для возвращения на начальную позицию
+    {
+            StartCoroutine(SnapToPosition(originalPosition, originalRotation));   
+            _rb.isKinematic = false;
+            _rb.useGravity = false;
+            IsInBackpack = false;
+        
+
+    }
+    public void SetInBackpack()
+    {
+        IsInBackpack = true; // Корректировка состояния предмета
         _rb.isKinematic = false;
-        _collider.enabled = true;
-        transform.SetParent(_originalParent);
-        ResetPosition();
+        
     }
 
-    private void ResetPosition()
+  
+    private IEnumerator SnapToPosition(Vector3 targetPosition, Quaternion targetRotation)
     {
-        transform.localPosition = _originalPosition;
-        transform.localRotation = _originalRotation;
+        float duration = 0.3f;
+        float elapsed = 0.0f;
+        Vector3 initialPosition = transform.localPosition;
+        Quaternion initialRotation = transform.localRotation;
+
+        while (elapsed < duration)
+        {
+            transform.localPosition = Vector3.Lerp(initialPosition, targetPosition, (elapsed / duration));
+            transform.localRotation = Quaternion.Slerp(initialRotation, targetRotation, (elapsed / duration));
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        
+
+        transform.localPosition = targetPosition;
+        transform.localRotation = targetRotation;
     }
 }
