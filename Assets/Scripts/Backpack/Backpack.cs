@@ -14,7 +14,13 @@ public class Backpack : MonoBehaviour
     [SerializeField] private Transform _itemsContainer; // Контейнер для хранения предметов
     [SerializeField] private float _snapDuration = 0.3f; // Время анимации
 
-    public InventoryEvent OnInventoryChanged;
+    public InventoryEvent OnInventoryChanged; // Событие при изменении инвентаря
+    public InventoryEvent OnItemStored; // Событие при складывании предмета
+    public InventoryEvent OnItemRemoved; // Событие при извлечении предмета
+
+    [Header("Events")]
+    public InventoryEvent OnInventoryAction = new InventoryEvent();
+
 
     private Dictionary<ItemType, InventoryItem> _storedItems = new Dictionary<ItemType, InventoryItem>();
 
@@ -54,6 +60,9 @@ public class Backpack : MonoBehaviour
 
         _storedItems.Add(item.Data.itemType, item);
         OnInventoryChanged?.Invoke(item.Data, "added");
+        OnItemStored?.Invoke(item.Data, "stored");
+        NetworkManager.Instance.SendInventoryEvent(item.Data.itemID, "stored"); // Отправка запроса на сервер
+
         return true;
     }
 
@@ -76,7 +85,7 @@ public class Backpack : MonoBehaviour
     }
     private void DealingWithItemClick()
     {
-        if (Input.GetMouseButtonDown(0)) // Проверка нажатия ЛКМ
+        if (Input.GetMouseButtonDown(0))  // Проверка нажатия ЛКМ
         {
             Debug.Log("Checking for item click.");
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -116,6 +125,8 @@ public class Backpack : MonoBehaviour
             // Удаляем предмет из хранения
             _storedItems.Remove(itemType);
             OnInventoryChanged?.Invoke(itemToRemove.Data, "removed");
+            OnItemRemoved?.Invoke(itemToRemove.Data, "removed");
+            NetworkManager.Instance.SendInventoryEvent(itemToRemove.Data.itemID, "removed"); // Отправка запроса на сервер
         }
     }
 }
